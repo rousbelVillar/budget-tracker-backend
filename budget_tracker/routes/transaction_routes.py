@@ -1,10 +1,12 @@
+#transactions_routes.py
+
 from flask import request, jsonify
 from ..models.transaction_models import db, Transaction
 from flask import Blueprint
 
-transaction_bp = Blueprint('routes_transactions', __name__)
+transaction_bp = Blueprint('transactions', __name__)
 
-@transaction_bp.route('/transactions', methods=['POST'])
+@transaction_bp.route('/add', methods=['POST'])
 def add_transaction():
     data = request.json
     t = Transaction(
@@ -17,7 +19,7 @@ def add_transaction():
     db.session.commit()
     return jsonify({'message': 'Transaction added', 'id': t.id}), 201
 
-@transaction_bp.route('/transactions/<int:transaction_id>', methods=['DELETE'])
+@transaction_bp.route('/<int:transaction_id>', methods=['DELETE'])
 def delete_transaction(transaction_id):
     t = Transaction.query.get(transaction_id)
     if not t:
@@ -26,7 +28,7 @@ def delete_transaction(transaction_id):
     db.session.commit()
     return jsonify({'message': 'Deleted'})
 
-@transaction_bp.route('/transactions', methods=['GET'])
+@transaction_bp.route('/', methods=['GET'])
 def get_transactions():
     month = request.args.get('month')  # e.g., '2025-05'
     query = Transaction.query

@@ -1,27 +1,12 @@
+#category_routes.py
 from flask import request, jsonify
 from flask import Blueprint
 from ..models.category_models import Category, db
 
-category_bp = Blueprint('routes_categories', __name__)
+category_bp = Blueprint('categories', __name__)
 
 
-@category_bp.before_app_request
-def seed_default_categories():
-    default_categories = [
-        {"name": "Groceries", "icon": "🛒"},
-        {"name": "Rent", "icon": "🏠"},
-        {"name": "Utilities", "icon": "💡"},
-        {"name": "Transport", "icon": "🚌"},
-        {"name": "Health", "icon": "💊"},
-    ]
-    for cat in default_categories:
-        exists = Category.query.filter_by(name=cat["name"]).first()
-        if not exists:
-            db.session.add(Category(name=cat["name"], icon=cat["icon"], is_default=True))
-    db.session.commit()
-
-
-@category_bp.route("/categories", methods=["GET"])
+@category_bp.route("/", methods=["GET"])
 def get_categories():
     categories = Category.query.all()
     return jsonify([{
@@ -31,7 +16,7 @@ def get_categories():
         "is_default": c.is_default
     } for c in categories])
 
-@category_bp.route("/categories", methods=["POST"])
+@category_bp.route("/add", methods=["POST"])
 def add_category():
     data = request.json
     name = data.get("name")

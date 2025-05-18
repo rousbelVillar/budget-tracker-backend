@@ -1,9 +1,9 @@
 import pytest
-from budget_tracker import create_app, db
+from budget_tracker.extensions import db
 
 @pytest.fixture
 def client():
-    app = create_app('testing')  
+    app = db('testing')  
 
     with app.app_context():
         db.create_all()

@@ -1,4 +1,3 @@
-import json
 
 def test_add_category(client):
     response = client.post('/categories', json={
