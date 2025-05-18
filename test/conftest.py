@@ -14,5 +14,4 @@ def app():
 
 @pytest.fixture
 def client(app):
-    print("⚡ Client fixture used")
     return app.test_client() 
