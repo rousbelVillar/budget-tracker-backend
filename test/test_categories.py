@@ -1,6 +1,6 @@
 
 def test_add_category(client):
-    response = client.post('/categories', json={
+    response = client.post('/categories/add', json={
         'name': 'Test Category',
         'icon': '🧪'
     })
@@ -11,16 +11,16 @@ def test_add_category(client):
     assert data['icon'] == '🧪'
 
 def test_add_duplicate_category(client):
-    client.post('/categories', json={'name': 'Health', 'icon': '💊'})
-    response = client.post('/categories', json={'name': 'Health', 'icon': '💊'})
-
+    client.post('/categories/add', json={'name': 'Health', 'icon': '💊'})
+    response = client.post('/categories/add', json={'name': 'Health', 'icon': '💊'})
+    print(response.status_code)
     assert response.status_code == 400 or response.status_code == 409
 
 def test_get_categories(client):
-    client.post('/categories', json={'name': 'Groceries', 'icon': '🛒'})
-    client.post('/categories', json={'name': 'Rent', 'icon': '🏠'})
+    client.post('/categories/add', json={'name': 'Groceries', 'icon': '🛒'})
+    client.post('/categories/add', json={'name': 'Rent', 'icon': '🏠'})
     
-    response = client.get('/categories')
+    response = client.get('/categories/')
     data = response.get_json()
     
     assert response.status_code == 200

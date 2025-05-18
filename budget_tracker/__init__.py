@@ -11,6 +11,7 @@ def create_app(config_name=None):
     if config_name == "testing":
         app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///test.db"
         app.config["TESTING"] = True
+        print("testing config")
     else:
         app.config["SQLALCHEMY_DATABASE_URI"] ="sqlite:///budget.db"
         app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
