@@ -3,8 +3,9 @@ from budget_tracker import db
 from budget_tracker.auth_utils import generate_auth_token, verify_auth_token
 from sqlalchemy.exc import IntegrityError
 from budget_tracker.models.user_models import User
+from functools import wraps
+from flask import request, jsonify
 
-User
 auth_bp = Blueprint("auth", __name__, url_prefix="/api/auth")
 
 @auth_bp.route("/register", methods=["POST"])
@@ -85,3 +86,15 @@ def profile():
         return jsonify({"message": "User not found"}), 404
 
     return jsonify(user.serialize())
+
+def login_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        token = request.cookies.get("token")
+        if not token:
+            return jsonify({"message": "Not authenticated"}), 401
+        user_id = verify_auth_token(token)
+        if not user_id:
+            return jsonify({"message": "Invalid or expired session"}), 401
+        return f(user_id=user_id, *args, **kwargs)
+    return decorated_function

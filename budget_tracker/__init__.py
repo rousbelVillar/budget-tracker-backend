@@ -4,9 +4,7 @@ from flask import Flask
 
 from budget_tracker.routes import auth_routes
 from .routes.transaction_routes import transaction_bp
-from .routes.category_routes import category_bp
 from flask_cors import CORS
-from budget_tracker.extensions import db
 
 def create_app(config_name=None):
     app = Flask(__name__)

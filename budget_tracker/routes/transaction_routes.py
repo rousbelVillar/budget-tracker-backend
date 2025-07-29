@@ -36,7 +36,7 @@ def get_transactions():
     if month:
         query = query.filter(Transaction.date.startswith(month))
     user_id = session.get('user_id')
-    transactions = Transaction.query.filter_by(user_id=user_id).all()
+    transactions = Transaction.query.filter_by(user_id=user_id).all()    
     return jsonify([{
         'id': t.id,
         'date': t.date,
