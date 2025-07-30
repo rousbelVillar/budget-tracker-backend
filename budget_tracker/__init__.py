@@ -2,6 +2,7 @@
 from flask import Flask
 from .routes.transaction_routes import transaction_bp
 from .routes.category_routes import category_bp
+from .routes.auth_routes import auth_bp
 from flask_cors import CORS
 from budget_tracker.extensions import db
 
@@ -18,12 +19,12 @@ def create_app(config_name=None):
         app.config["TESTING"] = False
 
 
-    CORS(app,resources={r"/*": {"origins": "*"}})
+    CORS(app,supports_credentials=True,resources={r"/*": {"origins": "*"}})
     db.init_app(app)
 
     app.register_blueprint(transaction_bp, url_prefix='/transactions')
     app.register_blueprint(category_bp, url_prefix='/categories')
-
+    app.register_blueprint(auth_bp, url_prefix='/auth')
     with app.app_context():
         db.create_all()
 
