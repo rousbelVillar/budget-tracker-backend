@@ -1,4 +1,6 @@
+from datetime import timedelta
 from flask import Blueprint, request, jsonify, make_response
+from flask_jwt_extended import create_access_token, get_jwt_identity, jwt_required, set_access_cookies, unset_jwt_cookies
 from budget_tracker.extensions import db
 from budget_tracker.auth_utils import generate_auth_token, verify_auth_token
 from sqlalchemy.exc import IntegrityError
@@ -30,7 +32,7 @@ def register():
     token = generate_auth_token(user.id)
     resp = make_response(user.serialize())
     resp.set_cookie(
-        "token",
+        "access_token_cookie",
         token,
         httponly=True,
         secure=True,
@@ -45,47 +47,36 @@ def login():
     data = request.get_json()
     email = data.get("email")
     password = data.get("password")
-    print(email)
-    print(password)
+
     user = User.query.filter_by(email=email).first()
     if not user or not user.check_password(password):
         return jsonify({"message": "Invalid credentials"}), 401
 
-    token = generate_auth_token(user.id)
-    resp = make_response(user.serialize())
-    resp.set_cookie(
-        "token",
-        token,
-        httponly=True,
-        secure=True,
-        samesite="Lax",
-        max_age=60 * 60 * 24 * 7,
-    )
-    return resp
+    access_token = create_access_token(identity=str(user.id), expires_delta=timedelta(days=7))
+    
+    response = jsonify(user.serialize())
+    set_access_cookies(response, access_token, max_age=60 * 60 * 24 * 7)
+
+    return response
 
 
 @auth_bp.route("/logout", methods=["POST"])
 def logout():
-    resp = make_response({"message": "Logged out"})
-    resp.set_cookie("token", "", expires=0)
+    resp = jsonify({"message": "Logged out"})
+    unset_jwt_cookies(resp)
     return resp
 
 
+
 @auth_bp.route("/profile", methods=["GET"])
+@jwt_required()
 def profile():
-    token = request.cookies.get("token")
-    if not token:
-        return jsonify({"message": "Not authenticated"}), 401
-
-    user_id = verify_auth_token(token)
-    if not user_id:
-        return jsonify({"message": "Invalid or expired session"}), 401
-
+    user_id = get_jwt_identity()
     user = User.query.get(user_id)
     if not user:
         return jsonify({"message": "User not found"}), 404
-
     return jsonify(user.serialize())
+
 
 def login_required(f):
     @wraps(f)

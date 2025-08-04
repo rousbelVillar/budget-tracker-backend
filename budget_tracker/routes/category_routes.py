@@ -1,7 +1,10 @@
 #category_routes.py
 from flask import request, jsonify
 from flask import Blueprint
+from budget_tracker.models.user_models import User
 from ..models.category_models import Category, db
+from flask_jwt_extended import jwt_required, get_jwt_identity
+
 
 category_bp = Blueprint('categories', __name__)
 
@@ -27,8 +30,15 @@ def add_category():
     }), 201
 
 @category_bp.route("/", methods=["GET"])
+@jwt_required()
 def get_categories():
-    categories = Category.query.all()
+    user_id = get_jwt_identity()
+    user = User.query.get(user_id)
+    default_user = User.query.filter_by(email="default@system").first()
+
+    categories = Category.query.filter(
+        Category.user_id.in_([user.id, default_user.id])
+    ).all()
     return jsonify([{
         "id": c.id,
         "name": c.name,

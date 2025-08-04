@@ -4,6 +4,8 @@ from budget_tracker.models.transaction_models import Transaction
 
 from sqlalchemy import select, delete
 
+from budget_tracker.models.user_models import User
+
 
 app = create_app()
 
@@ -15,8 +17,14 @@ def delete_category():
     c = Category.query.get(7)
     db.session.delete(c)
     db.session.commit()
-    print("Category deleted.")
+def display_users():
+    print(db.session.execute(select(User.name,User.password_hash)).all())
+def delete_user():
+    stmt = delete(User).where(User.name == "test")
+    db.session.execute(stmt)
+    db.session.commit()   
+    print(db.session.execute(select(User).where(User.name=="test")).first())
 
 with app.app_context():
-    display_transactions()
+     delete_user()
     
