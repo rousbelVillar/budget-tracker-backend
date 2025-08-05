@@ -1,4 +1,5 @@
 # __init__.py
+#source venv/bin/activate 
 
 from flask import Flask
 from .routes.transaction_routes import transaction_bp

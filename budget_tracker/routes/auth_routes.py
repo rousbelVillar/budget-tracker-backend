@@ -29,16 +29,9 @@ def register():
         db.session.rollback()
         return jsonify({"message": "Email already registered"}), 400
 
-    token = generate_auth_token(user.id)
+    access_token = create_access_token(identity=str(user.id), expires_delta=timedelta(days=7))
     resp = make_response(user.serialize())
-    resp.set_cookie(
-        "access_token_cookie",
-        token,
-        httponly=True,
-        secure=True,
-        samesite="Lax",
-        max_age=60 * 60 * 24 * 7, 
-    )
+    set_access_cookies(resp, access_token, max_age=60 * 60 * 24 * 7)
     return resp
 
 

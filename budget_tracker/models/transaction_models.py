@@ -15,3 +15,4 @@ class Transaction(db.Model):
     description = db.Column(db.String(250), nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     user = db.relationship('User',back_populates='transactions')
+    is_deleted = db.Column(db.Boolean, default=False)

@@ -12,7 +12,7 @@ app = create_app()
 def display_categories():
     print(db.session.execute(select(Category.name,Category.id,Category.is_default)).all().__format__())
 def display_transactions():
-    print(db.session.execute(select(Transaction.amount,Transaction.category,Transaction.date,Transaction.description,Transaction.id)).all())
+    print(db.session.execute(select(Transaction.amount,Transaction.category,Transaction.description,Transaction.id,Transaction.is_deleted)).all())
 def delete_category():
     c = Category.query.get(7)
     db.session.delete(c)
@@ -26,5 +26,5 @@ def delete_user():
     print(db.session.execute(select(User).where(User.name=="test")).first())
 
 with app.app_context():
-     delete_user()
+     display_transactions()
     

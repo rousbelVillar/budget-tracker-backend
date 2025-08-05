@@ -12,7 +12,7 @@ transaction_bp = Blueprint('transactions', __name__)
 @jwt_required()
 def add_transaction():
     user_id = get_jwt_identity()
-    data = request.json
+    data = request.json.get("params")
     t = Transaction(
         type=data['type'],
         amount=data['amount'],
@@ -26,10 +26,10 @@ def add_transaction():
 
 @transaction_bp.route('/<int:transaction_id>', methods=['DELETE'])
 def delete_transaction(transaction_id):
-    t = Transaction.query.get(transaction_id)
-    if not t:
-        return jsonify({'error': 'Not found'}), 404
-    db.session.delete(t)
+    transaction = Transaction.query.get(transaction_id)
+    if not transaction:
+        return jsonify({'error': 'Transaction not found'}), 404
+    transaction.is_deleted = True
     db.session.commit()
     return jsonify({'message': 'Deleted'})
 
@@ -39,15 +39,12 @@ def get_transactions():
     if request.method == "OPTIONS":
         return '', 200
     user_id = get_jwt_identity()
-    print(user_id)
-    print(request.cookies)
     month = request.args.get('month')  # e.g.,'2025-05'
-    transactions = Transaction.query.filter_by(user_id=user_id).order_by(Transaction.date.desc()).all()
-    print("query: ", transactions)
+    transactions = Transaction.query.filter_by(user_id=user_id,is_deleted=False).order_by(Transaction.date.desc()).all()
     if month and len(transactions) > 0:
         query = query.filter(Transaction.date.startswith(month))
     elif len(transactions) > 0:
-        transactions = query.all()
+        transactions = transactions
     return jsonify([{
         'id': t.id,
         'date': t.date,
