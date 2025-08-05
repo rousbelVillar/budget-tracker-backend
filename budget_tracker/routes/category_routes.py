@@ -10,16 +10,18 @@ category_bp = Blueprint('categories', __name__)
 
 
 @category_bp.route("/add", methods=["POST"])
+@jwt_required()
 def add_category():
-    data = request.json
+    data = request.json.get("params")
     name = data.get("name")
     icon = data.get("icon", "📝")
+    user_id = get_jwt_identity()
     if not name:
         return jsonify({"error": "Name is required"}), 400
     exists = Category.query.filter_by(name=name).first()
     if exists:
         return jsonify({"error": "Category already exists"}), 400
-    category = Category(name=name, icon=icon, is_default=False)
+    category = Category(name=name, icon=icon, is_default=False,user_id=user_id)
     db.session.add(category)
     db.session.commit()
     return jsonify({
@@ -29,7 +31,7 @@ def add_category():
         "is_default": category.is_default
     }), 201
 
-@category_bp.route("/", methods=["GET"])
+@category_bp.route("/get", methods=["GET"])
 @jwt_required()
 def get_categories():
     user_id = get_jwt_identity()
