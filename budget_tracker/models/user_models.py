@@ -9,8 +9,8 @@ class User(db.Model):
     password_hash = db.Column(db.String(128), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
-    transactions = db.relationship('Transaction', back_populates='user', lazy=True, cascade='all, delete-orphan')
-    categories = db.relationship('Category', back_populates='user', lazy=True, cascade='all, delete-orphan')
+    transactions = db.relationship('Transaction', back_populates='user', lazy="dynamic", cascade='all, delete-orphan')
+    categories = db.relationship('Category', back_populates='user', lazy="dynamic", cascade='all, delete-orphan')
 
 
     def set_password(self, password):

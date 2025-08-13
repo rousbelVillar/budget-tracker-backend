@@ -12,7 +12,8 @@ app = create_app()
 def display_categories():
     print(db.session.execute(select(Category.name,Category.id,Category.is_default)).all().__format__())
 def display_transactions():
-    print(db.session.execute(select(Transaction.amount,Transaction.category,Transaction.description,Transaction.id,Transaction.is_deleted)).all())
+    # print(db.session.execute(select(Transaction.amount,Transaction.category,Transaction.description,Transaction.id,Transaction.is_deleted)).all())
+    print(db.session.execute(select(Transaction.date)).all())
 def delete_category():
     c = Category.query.get(7)
     db.session.delete(c)

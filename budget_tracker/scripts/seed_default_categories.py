@@ -9,11 +9,14 @@ def create_default_categories():
                 default_user = create_default_user()
                 print(default_user)
                 default_categories = [
-                    {"name": "Groceries", "icon": "🛒","user_id":default_user.id},
+                    {"name": "Paycheck", "icon": "💰","user_id":default_user.id},
                     {"name": "Rent", "icon": "🏠","user_id":default_user.id},
+                    {"name": "Savings", "icon": "🤑","user_id":default_user.id},
+                    {"name": "Groceries", "icon": "🛒","user_id":default_user.id},
                     {"name": "Utilities", "icon": "💡","user_id":default_user.id},
                     {"name": "Transport", "icon": "🚌","user_id":default_user.id},
                     {"name": "Health", "icon": "💊","user_id":default_user.id},
+
                 ]
                 for cat in default_categories:
                     db.session.add(Category(name=cat["name"], icon=cat["icon"],user_id=cat["user_id"], is_default=True))

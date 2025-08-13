@@ -18,7 +18,7 @@ def add_category():
     user_id = get_jwt_identity()
     if not name:
         return jsonify({"error": "Name is required"}), 400
-    exists = Category.query.filter_by(name=name).first()
+    exists = Category.query.filter_by(name=name,user_id=user_id).first()
     if exists:
         return jsonify({"error": "Category already exists"}), 400
     category = Category(name=name, icon=icon, is_default=False,user_id=user_id)
@@ -47,3 +47,29 @@ def get_categories():
         "icon": c.icon,
         "is_default": c.is_default
     } for c in categories])
+
+@category_bp.route("/add/bulk",methods=["POST"])
+@jwt_required()
+def add_categories_bulk():
+    user_id = get_jwt_identity()
+    categories_data = request.get_json()
+
+
+    if not isinstance(categories_data,list):
+        return jsonify({"error": "Expected a list of categories"}), 400
+    categories = []
+    for entry in categories_data:
+        try:
+            category = Category(
+                name= entry["name"],
+                is_default= entry["is_default"],
+                user_id=user_id,
+                icon=entry["icon"]
+            )
+        except KeyError as e:
+            return jsonify({"error": f"Missing field {str(e)}"}), 400
+        categories.append(category)
+    db.session.add_all(categories)
+    db.session.commit()
+
+    return jsonify({"message": f"{len(categories)} transactions added"}), 201
