@@ -1,6 +1,4 @@
-from budget_tracker.extensions import db
 from budget_tracker import create_app
-from budget_tracker.models.category_models import Category
 from budget_tracker.scripts.seed_default_categories import create_default_categories
 
 def init_database():

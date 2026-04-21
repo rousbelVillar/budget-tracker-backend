@@ -1,12 +1,16 @@
 from sqlalchemy import DateTime
 from datetime import datetime
 from budget_tracker.extensions import db
+
+from zoneinfo import ZoneInfo
+from datetime import datetime
 import pytz
+
+dt = datetime.now(tz=ZoneInfo("UTC"))
 
 class Transaction(db.Model):
     tz_ny = pytz.timezone('America/Los_Angeles')
     now_la = datetime.now(tz_ny)
-    print('now_la',now_la)
     id = db.Column(db.Integer, primary_key=True)
     date = db.Column(DateTime, default=now_la)
     type = db.Column(db.String(10), nullable=False)
