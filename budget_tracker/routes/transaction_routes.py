@@ -1,9 +1,13 @@
 #transactions_routes.py
 
+from datetime import datetime
+
 from flask import request, jsonify
 from ..models.transaction_models import db, Transaction
 from flask import Blueprint
 from flask_jwt_extended import jwt_required, get_jwt_identity
+from sqlalchemy import select
+from sqlalchemy.orm import Session
 
 
 transaction_bp = Blueprint('transactions', __name__)
@@ -39,12 +43,28 @@ def get_transactions():
     if request.method == "OPTIONS":
         return '', 200
     user_id = get_jwt_identity()
-    month = request.args.get('month')  # e.g.,'2025-05'
-    transactions = Transaction.query.filter_by(user_id=user_id,is_deleted=False).order_by(Transaction.date.desc()).all()
-    if month and len(transactions) > 0:
-        query = query.filter(Transaction.date.startswith(month))
-    elif len(transactions) > 0:
-        transactions = transactions
+    start_date = request.args.get('start_date')
+    end_date = request.args.get('end_date')  
+    max_amount = request.args.get('max_amount')  
+
+    filters = [
+        Transaction.is_deleted == False,
+        Transaction.user_id == user_id
+    ]
+
+    if start_date is not None and end_date is not None:
+        start = datetime.strptime(start_date,"%Y-%m-%d")
+        end = datetime.strptime(end_date,"%Y-%m-%d")
+        filters.append(Transaction.date.between(start,end))
+
+    if max_amount is not None and int(max_amount) == 0:
+        filters.append(Transaction.amount > 500)
+    elif max_amount is not None:
+        filters.append(Transaction.amount < max_amount)
+
+    statement = select(Transaction).where(*filters)
+    transactions = db.session.execute(statement).scalars().all()
+  
     return jsonify([{
         'id': t.id,
         'date': t.date,
