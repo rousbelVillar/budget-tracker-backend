@@ -46,6 +46,9 @@ def get_transactions():
     start_date = request.args.get('start_date')
     end_date = request.args.get('end_date')  
     max_amount = request.args.get('max_amount')  
+    categories = request.args.get('categories')
+
+
 
     filters = [
         Transaction.is_deleted == False,
@@ -61,6 +64,11 @@ def get_transactions():
         filters.append(Transaction.amount > 500)
     elif max_amount is not None:
         filters.append(Transaction.amount < max_amount)
+
+    if categories is not None:
+        categories = categories.split(',')
+        filters.append(Transaction.category.in_(categories))
+
 
     statement = select(Transaction).where(*filters)
     transactions = db.session.execute(statement).scalars().all()
