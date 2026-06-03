@@ -23,7 +23,6 @@ class User(db.Model):
             'id' : self.id,
             'email':self.email,
             'name': self.name,
-            'profile_image_url': f"/api/users/{self.id}/picture" if self.picture else None
         }
     
 class UserPicture(db.Model):

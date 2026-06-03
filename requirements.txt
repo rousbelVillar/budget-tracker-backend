@@ -14,3 +14,5 @@ pytest
 pytest-flask
 flask-jwt-extended
 pytz
+supabase
+dotenv

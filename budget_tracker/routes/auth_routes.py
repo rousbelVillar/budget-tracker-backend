@@ -8,13 +8,14 @@ from budget_tracker.models.user_models import User, UserPicture
 from functools import wraps
 from flask import request, jsonify, make_response, send_from_directory, current_app, Blueprint
 from werkzeug.utils import secure_filename
+from supabase import create_client,Client
+from dotenv import load_dotenv
+
+
 
 auth_bp = Blueprint("auth", __name__)
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
-
-
-def allowed_file(filename):
-    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+BUCKET_NAME = "photos"
 
 @auth_bp.route("/register", methods=["POST"])
 def register():
@@ -30,20 +31,38 @@ def register():
     user.set_password(password)
     picture = None
 
+    # Load environment variables
+    load_dotenv()
+    url: str = os.environ.get("SUPABASE_URL")
+    key: str = os.environ.get("SUPABASE_KEY")
+
+    supabase = create_client(url, key)
+
+
     try:
         db.session.add(user)
         db.session.flush() 
         if file and allowed_file(file.filename):
             ext = secure_filename(file.filename).rsplit('.', 1)[1].lower()
             unique_name = f"{uuid.uuid4().hex}.{ext}"
-            save_path = os.path.join(current_app.config['UPLOAD_FOLDER'], unique_name)
-            file.save(save_path)
+            # Read file contents
+            contents = file.read()
+            # Upload to Supabase Storage
+            supabase.storage.from_(BUCKET_NAME).upload(unique_name, contents)
 
-            picture = UserPicture(user_id=user.id, filename=unique_name, mimetype=file.mimetype)
+            # Get public URL (string)
+            public_url = supabase.storage.from_(BUCKET_NAME).get_public_url(unique_name)
+
+            # Insert record into database
+            supabase.table(BUCKET_NAME).\
+                insert({"title": user.id, "image_url": public_url}).execute()
+            
+            picture = UserPicture(user_id=user.id, filename=public_url, mimetype=file.mimetype)
+            print('picture',picture)
             db.session.add(picture)
 
         db.session.commit()            
-    except IntegrityError:
+    except IntegrityError:  
         db.session.rollback()
         return jsonify({"message": "Email already registered"}), 400
 
@@ -70,7 +89,6 @@ def login():
 
     return response
 
-
 @auth_bp.route("/logout", methods=["POST"])
 def logout():
     resp = jsonify({"message": "Logged out"})
@@ -84,9 +102,15 @@ def profile():
     user = User.query.get(user_id)
     if not user:
         return jsonify({"message": "User not found"}), 404
-    print(user)
-    return jsonify(user.serialize())
-
+    profile_pic = UserPicture.query.get(user_id)
+    if not profile_pic:
+        return jsonify(user.serialize())
+    return jsonify({
+        "email": user.email,
+        "id": user.id,
+        "name":user.name,
+        "profile_image_url":profile_pic.filename
+    })
 
 def login_required(f):
     @wraps(f)
@@ -100,11 +124,5 @@ def login_required(f):
         return f(user_id=user_id, *args, **kwargs)
     return decorated_function
 
-@auth_bp.route("/users/<int:user_id>/picture", methods=["GET"])
-def get_profile_picture(user_id):
-    picture = UserPicture.query.filter_by(user_id=user_id).first_or_404()
-    return send_from_directory(
-        current_app.config['UPLOAD_FOLDER'],
-        picture.filename,
-        mimetype=picture.mimetype
-    )
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
