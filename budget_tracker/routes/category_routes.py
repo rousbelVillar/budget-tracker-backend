@@ -18,7 +18,7 @@ def add_category():
     user_id = get_jwt_identity()
     if not name:
         return jsonify({"error": "Name is required"}), 400
-    exists = Category.query.filter_by(name=name).first()
+    exists = Category.query.filter_by(name=name,user_id=user_id).first()
     if exists:
         return jsonify({"error": "Category already exists"}), 400
     category = Category(name=name, icon=icon, is_default=False,user_id=user_id)

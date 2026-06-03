@@ -4,10 +4,10 @@ from datetime import datetime
 
 from flask import request, jsonify
 from ..models.transaction_models import db, Transaction
+from ..models.user_models import User
 from flask import Blueprint
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from sqlalchemy import select
-from sqlalchemy.orm import Session
 
 
 transaction_bp = Blueprint('transactions', __name__)
@@ -47,19 +47,14 @@ def get_transactions():
     end_date = request.args.get('end_date')  
     max_amount = request.args.get('max_amount')  
     categories = request.args.get('categories')
-
-
-
     filters = [
         Transaction.is_deleted == False,
         Transaction.user_id == user_id
     ]
-
     if start_date is not None and end_date is not None:
         start = datetime.strptime(start_date,"%Y-%m-%d")
         end = datetime.strptime(end_date,"%Y-%m-%d")
         filters.append(Transaction.date.between(start,end))
-
     if max_amount is not None and int(max_amount) == 0:
         filters.append(Transaction.amount > 500)
     elif max_amount is not None:
@@ -69,9 +64,10 @@ def get_transactions():
         categories = categories.split(',')
         filters.append(Transaction.category.in_(categories))
 
-
     statement = select(Transaction).where(*filters)
     transactions = db.session.execute(statement).scalars().all()
+    
+
   
     return jsonify([{
         'id': t.id,
