@@ -4,13 +4,13 @@ from flask_jwt_extended import create_access_token, get_jwt_identity, jwt_requir
 from budget_tracker.extensions import db
 from budget_tracker.auth_utils import generate_auth_token, verify_auth_token
 from sqlalchemy.exc import IntegrityError
-from budget_tracker.models.user_models import User, UserPicture
+from budget_tracker.models.user_models import User, UserDetails, UserPicture
 from functools import wraps
 from flask import request, jsonify, make_response, send_from_directory, current_app, Blueprint
 from werkzeug.utils import secure_filename
+from werkzeug.datastructures import MultiDict
 from supabase import create_client,Client
 from dotenv import load_dotenv
-
 
 
 auth_bp = Blueprint("auth", __name__)
@@ -23,11 +23,13 @@ def register():
     email = request.form.get("email")
     password = request.form.get("password")
     file = request.files.get("profile_pic")
+    last_name = request.form.get("lastName")
+     
 
     if not name or not email or not password:
         return jsonify({"message": "Missing required fields"}), 400
 
-    user = User(name=name, email=email)
+    user = User(email=email)
     user.set_password(password)
     picture = None
 
@@ -40,8 +42,10 @@ def register():
 
 
     try:
-        db.session.add(user)
+        db.session.add(user)   
         db.session.flush() 
+        userDetails = UserDetails(user_id=user.id,name=name,last_name=last_name)
+        db.session.add(userDetails)
         if file and allowed_file(file.filename):
             ext = secure_filename(file.filename).rsplit('.', 1)[1].lower()
             unique_name = f"{uuid.uuid4().hex}.{ext}"
@@ -58,10 +62,12 @@ def register():
                 insert({"title": user.id, "image_url": public_url}).execute()
             
             picture = UserPicture(user_id=user.id, filename=public_url, mimetype=file.mimetype)
-            print('picture',picture)
+
             db.session.add(picture)
 
-        db.session.commit()            
+        db.session.commit()
+
+         
     except IntegrityError:  
         db.session.rollback()
         return jsonify({"message": "Email already registered"}), 400
