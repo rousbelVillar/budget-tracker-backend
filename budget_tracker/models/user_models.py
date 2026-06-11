@@ -18,12 +18,24 @@ class User(db.Model):
         self.password_hash = generate_password_hash(password)
     def check_password(self, password):
         return check_password_hash(self.password_hash,password)
+
     def serialize(self):
-        return{
-            'id' : self.id,
-            'email':self.email,
-        }
-    
+        try:
+            return {
+                'id': self.id,
+                'email': self.email,
+                'profileImage': self.picture.filename if self.picture else None,
+                'name': self.details.name if self.details else None,
+                'lastName': self.details.last_name if self.details else None,
+            }
+        except Exception as e:
+            return {
+                'id': self.id,
+                'email': self.email,
+                'profileImage': None,
+                'name': None,
+                'lastName': None,
+            }
 class UserPicture(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), primary_key=True)
     filename = db.Column(db.String(256), nullable=False)   

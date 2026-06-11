@@ -33,11 +33,11 @@ def create_app(config_name=None):
     app.config["JWT_ACCESS_COOKIE_PATH"] = "/"
     app.config["JWT_ACCESS_COOKIE_NAME"] = "access_token_cookie"
     app.config["JWT_ACCESS_CSRF_HEADER_NAME"] = "X-CSRF-TOKEN"
-    app.config["JWT_CSRF_METHODS"] = ["POST", "PUT", "PATCH", "DELETE"]
+    app.config["JWT_CSRF_METHODS"] = ["PUT", "PATCH", "DELETE"]
     #File setup
     app.config["UPLOAD_FOLDER"] = os.path.join(os.path.dirname(__file__), 'uploads', 'profile_pics')
     app.config["UPLOAD_EXTENSIONS"] = ['png', 'jpg', 'jpeg', 'gif', 'webp']
-    app.config["MAX_LENGTH_CONTENT"] = 5 * 1024 * 1024  # 5 MB hard limit
+    app.config["MAX_CONTENT_LENGTH"] = 5 * 1024 * 1024
 
     os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True) 
 
