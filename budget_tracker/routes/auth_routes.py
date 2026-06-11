@@ -65,11 +65,13 @@ def register():
         db.session.commit()
 
          
-    except IntegrityError:  
+    except IntegrityError as e:
+        print(e)  
         db.session.rollback()
         return jsonify({"message": "Email already registered"}), 400
     
-    except Exception as e:          # ← add this
+    except Exception as e:       
+        print(e)   # ← add this
         db.session.rollback()
         print("REGISTRATION ERROR:", type(e).__name__, e)
         return jsonify({"message": str(e)}), 500

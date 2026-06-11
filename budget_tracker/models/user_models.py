@@ -29,6 +29,7 @@ class User(db.Model):
                 'lastName': self.details.last_name if self.details else None,
             }
         except Exception as e:
+            print(e)
             return {
                 'id': self.id,
                 'email': self.email,
