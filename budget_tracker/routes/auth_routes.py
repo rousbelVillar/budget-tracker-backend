@@ -1,6 +1,6 @@
 from datetime import timedelta
 import uuid, os
-from flask_jwt_extended import create_access_token, get_jwt_identity, jwt_required, set_access_cookies, unset_jwt_cookies
+from flask_jwt_extended import create_access_token, get_jwt_identity,jwt_required, set_access_cookies, unset_jwt_cookies
 from budget_tracker.extensions import db
 from budget_tracker.auth_utils import generate_auth_token, verify_auth_token
 from sqlalchemy.exc import IntegrityError
@@ -8,8 +8,7 @@ from budget_tracker.models.user_models import User, UserDetails, UserPicture
 from functools import wraps
 from flask import request, jsonify, make_response, send_from_directory, current_app, Blueprint
 from werkzeug.utils import secure_filename
-from werkzeug.datastructures import MultiDict
-from supabase import create_client,Client
+from supabase import create_client
 from dotenv import load_dotenv
 
 
@@ -19,61 +18,68 @@ BUCKET_NAME = "photos"
 
 @auth_bp.route("/register", methods=["POST"])
 def register():
-    name = request.form.get("name")
-    email = request.form.get("email")
-    password = request.form.get("password")
-    file = request.files.get("profile_pic")
-    last_name = request.form.get("lastName")
-     
-
-    if not name or not email or not password:
-        return jsonify({"message": "Missing required fields"}), 400
-
-    user = User(email=email)
-    user.set_password(password)
-    picture = None
-
-    # Load environment variables
-    load_dotenv()
-    url: str = os.environ.get("SUPABASE_URL")
-    key: str = os.environ.get("SUPABASE_KEY")
-
-    supabase = create_client(url, key)
-
-
     try:
+        name = request.form.get("name")
+        email = request.form.get("email")
+        password = request.form.get("password")
+        file = request.files.get("profile_pic")
+        last_name = request.form.get("lastName")
+        
+
+        if not name or not email or not password:
+            return jsonify({"message": "Missing required fields"}), 400
+
+        user = User(email=email)
+        user.set_password(password)
+        picture = None
+
+        # Load environment variables
+        load_dotenv()
+        url: str = os.environ.get("SUPABASE_URL")
+        key: str = os.environ.get("SUPABASE_KEY")
+
+        supabase = create_client(url, key)
         db.session.add(user)   
         db.session.flush() 
         userDetails = UserDetails(user_id=user.id,name=name,last_name=last_name)
         db.session.add(userDetails)
         if file and allowed_file(file.filename):
-            ext = secure_filename(file.filename).rsplit('.', 1)[1].lower()
-            unique_name = f"{uuid.uuid4().hex}.{ext}"
-            # Read file contents
-            contents = file.read()
-            # Upload to Supabase Storage
-            supabase.storage.from_(BUCKET_NAME).upload(unique_name, contents)
+                ext = secure_filename(file.filename).rsplit('.', 1)[1].lower()
+                unique_name = f"{uuid.uuid4().hex}.{ext}"
+                # Read file contents
+                contents = file.read()
+                # Upload to Supabase Storage
+                supabase.storage.from_(BUCKET_NAME).upload(unique_name, contents)
 
-            # Get public URL (string)
-            public_url = supabase.storage.from_(BUCKET_NAME).get_public_url(unique_name)
+                # Get public URL (string)
+                public_url = supabase.storage.from_(BUCKET_NAME).get_public_url(unique_name)
 
-            # Insert record into database
-            supabase.table(BUCKET_NAME).\
-                insert({"title": user.id, "image_url": public_url}).execute()
-            
-            picture = UserPicture(user_id=user.id, filename=public_url, mimetype=file.mimetype)
+                # Insert record into database
+                supabase.table(BUCKET_NAME).\
+                    insert({"title": user.id, "image_url": public_url}).execute()
+                
+                picture = UserPicture(user_id=user.id, filename=public_url, mimetype=file.mimetype)
 
-            db.session.add(picture)
+                db.session.add(picture)
 
         db.session.commit()
 
          
-    except IntegrityError:  
+    except IntegrityError as e:
+        print(e)  
         db.session.rollback()
         return jsonify({"message": "Email already registered"}), 400
+    
+    except Exception as e:       
+        print(e)   # ← add this
+        db.session.rollback()
+        print("REGISTRATION ERROR:", type(e).__name__, e)
+        return jsonify({"message": str(e)}), 500
+
 
     access_token = create_access_token(identity=str(user.id), expires_delta=timedelta(days=7))
-    resp = make_response(user.serialize())
+
+    resp = jsonify(user.serialize())
     set_access_cookies(resp, access_token, max_age=60 * 60 * 24 * 7)
     return resp
 
@@ -108,15 +114,8 @@ def profile():
     user = User.query.get(user_id)
     if not user:
         return jsonify({"message": "User not found"}), 404
-    profile_pic = UserPicture.query.get(user_id)
-    if not profile_pic:
-        return jsonify(user.serialize())
-    return jsonify({
-        "email": user.email,
-        "id": user.id,
-        "name":user.name,
-        "profile_image_url":profile_pic.filename
-    })
+
+    return jsonify(user.serialize())
 
 def login_required(f):
     @wraps(f)
