@@ -1,20 +1,13 @@
 from datetime import timedelta
-import uuid, os
 from flask_jwt_extended import create_access_token, get_jwt_identity,jwt_required, set_access_cookies, unset_jwt_cookies
 from budget_tracker.extensions import db
-from budget_tracker.auth_utils import  verify_auth_token
 from sqlalchemy.exc import IntegrityError
 from budget_tracker.models.user_models import User, UserDetails, UserPicture
-from functools import wraps
+from budget_tracker.modules.user_module import User as UserModule
 from flask import request, jsonify, Blueprint
-from werkzeug.utils import secure_filename
-from supabase import create_client
-from dotenv import load_dotenv
 
 
 auth_bp = Blueprint("auth", __name__)
-ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
-BUCKET_NAME = "photos"
 
 @auth_bp.route("/register", methods=["POST"])
 def register():
@@ -33,11 +26,14 @@ def register():
 
         db.session.add(user)   
         db.session.flush() 
-        userDetails = UserDetails(user_id=user.id,name=name,last_name=last_name)
-        db.session.add(userDetails)
-        if file and allowed_file(file.filename):
+        user_details = UserDetails(user_id=user.id,name=name,last_name=last_name)
+        db.session.add(user_details)
+        user_module = UserModule()
 
-            add_image(file,user)
+        if file and user_module.allowed_file(file.filename):
+            user_module.add_image(file,user)      
+            picture = UserPicture(user_id=user.id, filename=user_module.public_url, mimetype=file.mimetype)
+            db.session.add(picture)
         db.session.commit()
 
          
@@ -47,7 +43,7 @@ def register():
         return jsonify({"message": "An Error Has Occurred."}), 400
     
     except Exception as e:       
-        print(e)   # ← add this
+        print(e)
         db.session.rollback()
         print("REGISTRATION ERROR:", type(e).__name__, e)
         return jsonify({"message": str(e)}), 500
@@ -58,35 +54,6 @@ def register():
     resp = jsonify(user.serialize())
     set_access_cookies(resp, access_token, max_age=60 * 60 * 24 * 7)
     return resp
-
-def add_image(file,user) :
-    load_dotenv()
-    url: str = os.environ.get("SUPABASE_URL")
-    key: str = os.environ.get("SUPABASE_KEY")
-    supabase = create_client(url, key)
-    ext = secure_filename(file.filename).rsplit('.', 1)[1].lower()
-    unique_name = f"{uuid.uuid4().hex}.{ext}"
-    
-    # Read file contents
-    contents = file.read()
-    # Upload to Supabase Storage
-    supabase.storage.from_(BUCKET_NAME).upload(unique_name, contents)
-
-    # Get public URL (string)
-    public_url = supabase.storage.from_(BUCKET_NAME).get_public_url(unique_name)
-
-    # Insert record into database
-    if not user.picture :
-        supabase.table(BUCKET_NAME).\
-            insert({"title": user.id, "image_url": public_url}).execute()
-    # else :
-    #     supabase.table(BUCKET_NAME).\
-    #         update({})
-    
-    picture = UserPicture(user_id=user.id, filename=public_url, mimetype=file.mimetype)
-
-    db.session.add(picture)
-    return picture
 
 
 @auth_bp.route("/login", methods=["POST"])
@@ -122,23 +89,31 @@ def profile():
 
     return jsonify(user.serialize())
 
-def login_required(f):
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        token = request.cookies.get("token")
-        if not token:
-            return jsonify({"message": "Not authenticated"}), 401
-        user_id = verify_auth_token(token)
-        if not user_id:
-            return jsonify({"message": "Invalid or expired session"}), 401
-        return f(user_id=user_id, *args, **kwargs)
-    return decorated_function
-
 @auth_bp.route("/profile/update",methods=["POST"])
 @jwt_required()
 def profile_update():
-    print("Updating profile",request.form)
-    return jsonify({})
+    user_id = get_jwt_identity()
+    name = request.form.get("name")
+    last_name = request.form.get("lastName")
+    password = request.form.get("password")
+    file = request.form.get("file")
 
-def allowed_file(filename):
-    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+    if not user_id:
+        return jsonify({"message": "Invalid credentials"}), 401
+    else:
+        user = User.query.get(user_id)
+        user_details = UserDetails.query.get(user_id)
+        user_picture = UserPicture.query.get(user_id)
+        if name:
+            user_details.name = name
+        if last_name:
+            user_details.last_name = last_name
+        user_module = UserModule()
+        if file and user_module.allowed_file(file.filename):
+            user_module.add_image(file,user) 
+            user_picture.filename = user_module.public_url   
+            user_picture.mimetype = file.mimetype
+        
+
+    db.session.commit()
+    return jsonify({"message": "Profile updated", "user": user.serialize()}), 200
