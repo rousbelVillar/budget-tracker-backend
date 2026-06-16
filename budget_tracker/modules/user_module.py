@@ -5,7 +5,6 @@ from dotenv import load_dotenv
 from functools import wraps
 import uuid, os
 from budget_tracker.auth_utils import  verify_auth_token
-from budget_tracker.extensions import db
 
 class User:
     def __init__(self):
@@ -36,9 +35,11 @@ class User:
         # Insert record into database
         if not user.picture :
             supabase.table(BUCKET_NAME).\
-                insert({"title": user.id, "image_url": self.public_url}).execute()
+                insert({"title": "IMG_"+ user.id, "image_url": self.public_url}).execute()
+        else:
+            supabase.table(BUCKET_NAME).\
+            update({"title": "IMG_"+ user.id , "image_url": self.public_url}).eq("id", 1).execute()
 
-@staticmethod
 def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
@@ -51,7 +52,6 @@ def login_required(f):
         return f(user_id=user_id, *args, **kwargs)
     return decorated_function
 
-@staticmethod
 def allowed_file(filename):
     ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS

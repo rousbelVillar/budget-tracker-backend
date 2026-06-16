@@ -28,7 +28,8 @@ def register():
         db.session.flush() 
         user_details = UserDetails(user_id=user.id,name=name,last_name=last_name)
         db.session.add(user_details)
-        user_module = UserModule(request=request,db=db)
+        user_module = UserModule()
+
         if file and user_module.allowed_file(file.filename):
             user_module.add_image(file,user)      
             picture = UserPicture(user_id=user.id, filename=user_module.public_url, mimetype=file.mimetype)
@@ -91,6 +92,28 @@ def profile():
 @auth_bp.route("/profile/update",methods=["POST"])
 @jwt_required()
 def profile_update():
-    print("Updating profile",request.form)
-    return jsonify({})
+    user_id = get_jwt_identity()
+    name = request.form.get("name")
+    last_name = request.form.get("lastName")
+    password = request.form.get("password")
+    file = request.form.get("file")
 
+    if not user_id:
+        return jsonify({"message": "Invalid credentials"}), 401
+    else:
+        user = User.query.get(user_id)
+        user_details = UserDetails.query.get(user_id)
+        user_picture = UserPicture.query.get(user_id)
+        if name:
+            user_details.name = name
+        if last_name:
+            user_details.last_name = last_name
+        user_module = UserModule()
+        if file and user_module.allowed_file(file.filename):
+            user_module.add_image(file,user) 
+            user_picture.filename = user_module.public_url   
+            user_picture.mimetype = file.mimetype
+        
+
+    db.session.commit()
+    return jsonify({"message": "Profile updated", "user": user.serialize()}), 200
