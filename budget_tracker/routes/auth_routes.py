@@ -5,6 +5,7 @@ from sqlalchemy.exc import IntegrityError
 from budget_tracker.models.user_models import User, UserDetails, UserPicture
 from budget_tracker.modules.user_module import User as UserModule
 from flask import request, jsonify, Blueprint
+from budget_tracker.modules.user_static import allowed_file
 
 
 auth_bp = Blueprint("auth", __name__)
@@ -30,7 +31,7 @@ def register():
         db.session.add(user_details)
         user_module = UserModule()
 
-        if file and user_module.allowed_file(file.filename):
+        if file and allowed_file(file.filename):
             user_module.add_image(file,user)      
             picture = UserPicture(user_id=user.id, filename=user_module.public_url, mimetype=file.mimetype)
             db.session.add(picture)
@@ -60,8 +61,11 @@ def register():
 def login():
     data = request.get_json()
     email = data.get("email")
+    email_on_request = request.form.get("email")
     password = data.get("password")
 
+    print(email)
+    print(email_on_request)
     user = User.query.filter_by(email=email).first()
     if not user or not user.check_password(password):
         return jsonify({"message": "Invalid credentials"}), 401
@@ -110,7 +114,7 @@ def profile_update():
             if last_name:
                 user_details.last_name = last_name
             user_module = UserModule()
-            if file and user_module.allowed_file(file.filename):
+            if file and allowed_file(file.filename):
                 user_module.add_image(file,user) 
                 user_picture.filename = user_module.public_url   
                 user_picture.mimetype = file.mimetype
@@ -122,3 +126,4 @@ def profile_update():
         return jsonify({"message": str(e)}), 500
     db.session.commit()
     return jsonify({"message": "Profile updated", "user": user.serialize()}), 200
+

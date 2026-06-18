@@ -24,7 +24,7 @@ class User(db.Model):
             return {
                 'id': self.id,
                 'email': self.email,
-                'profileImage': self.picture.filename if self.picture else None,
+                'profileImageUrl': self.picture.filename if self.picture else None,
                 'name': self.details.name if self.details else None,
                 'lastName': self.details.last_name if self.details else None,
             }
@@ -33,7 +33,7 @@ class User(db.Model):
             return {
                 'id': self.id,
                 'email': self.email,
-                'profileImage': None,
+                'profileImageUrl': None,
                 'name': None,
                 'lastName': None,
             }
